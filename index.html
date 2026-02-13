@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KodNest Premium Build System</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="main.js" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -26,111 +27,41 @@
 
       <main class="main">
         <div class="main__inner">
-          <!-- Context Header -->
-          <section class="context-header">
-            <h1 class="context-header__title">Define your build context</h1>
-            <p class="context-header__subtitle">
-              Provide enough detail for a reproducible build, without over-specifying implementation.
-            </p>
-          </section>
-
-          <!-- Workspace Layout -->
-          <section class="layout">
-            <!-- Primary Workspace (70%) -->
-            <div class="layout__primary">
-              <div class="card">
-                <div class="card__header">
-                  <h2 class="card__title">Build brief</h2>
-                  <p class="card__meta">This is the core description of what you want built.</p>
-                </div>
-                <div class="card__body">
-                  <div class="field-group">
-                    <label for="brief-title" class="field-label">Title</label>
-                    <input
-                      id="brief-title"
-                      class="field-input"
-                      type="text"
-                      placeholder="e.g. Customer onboarding flow"
-                    />
-                  </div>
-
-                  <div class="field-group">
-                    <label for="brief-summary" class="field-label">Summary</label>
-                    <textarea
-                      id="brief-summary"
-                      class="field-input field-input--textarea"
-                      placeholder="Describe the user journey, constraints, and desired outcome..."
-                    ></textarea>
-                    <p class="field-helper">
-                      Aim for 3–7 sentences. Focus on what success looks like rather than technical detail.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card">
-                <div class="card__header">
-                  <h2 class="card__title">Environment & constraints</h2>
-                  <p class="card__meta">Capture where this build lives and any non-negotiables.</p>
-                </div>
-                <div class="card__body card__body--columns">
-                  <div class="field-group">
-                    <label for="target-env" class="field-label">Target environment</label>
-                    <input
-                      id="target-env"
-                      class="field-input"
-                      type="text"
-                      placeholder="e.g. Web, mobile-responsive, internal dashboard"
-                    />
-                  </div>
-
-                  <div class="field-group">
-                    <label for="constraints" class="field-label">Constraints</label>
-                    <textarea
-                      id="constraints"
-                      class="field-input field-input--textarea"
-                      placeholder="List design, technical, or compliance constraints..."
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
+          <!-- Job Notification Tracker Navigation -->
+          <nav class="main-nav" aria-label="Job Notification Tracker primary">
+            <button class="main-nav__toggle" type="button" aria-expanded="false" aria-controls="main-nav-list">
+              <span class="main-nav__toggle-icon" aria-hidden="true"></span>
+              <span class="main-nav__toggle-label">Menu</span>
+            </button>
+            <div class="main-nav__list-wrapper" id="main-nav-list">
+              <ul class="main-nav__list">
+                <li class="main-nav__item">
+                  <a href="/dashboard" data-route="/dashboard" class="main-nav__link">Dashboard</a>
+                </li>
+                <li class="main-nav__item">
+                  <a href="/saved" data-route="/saved" class="main-nav__link">Saved</a>
+                </li>
+                <li class="main-nav__item">
+                  <a href="/digest" data-route="/digest" class="main-nav__link">Digest</a>
+                </li>
+                <li class="main-nav__item">
+                  <a href="/settings" data-route="/settings" class="main-nav__link">Settings</a>
+                </li>
+                <li class="main-nav__item">
+                  <a href="/proof" data-route="/proof" class="main-nav__link">Proof</a>
+                </li>
+              </ul>
             </div>
+          </nav>
 
-            <!-- Secondary Panel (30%) -->
-            <aside class="layout__secondary">
-              <div class="card card--secondary">
-                <div class="card__header">
-                  <h2 class="card__title">Step guidance</h2>
-                  <p class="card__meta">
-                    Use this brief to create a build-ready prompt that can be reused across tools.
-                  </p>
-                </div>
-                <div class="card__body card__body--stack">
-                  <section class="panel-section">
-                    <h3 class="panel-section__title">Prompt draft</h3>
-                    <div class="prompt-box">
-                      <pre class="prompt-box__content" contenteditable="false">
-You are building a production-ready feature for KodNest.
-Use a calm, intentional interface.
-Follow the provided build brief and environment details.
-No gradients, no playful visuals, no experimental layouts.</pre
-                      >
-                    </div>
-                    <button class="btn btn--secondary btn--full">Copy</button>
-                  </section>
-
-                  <section class="panel-section">
-                    <h3 class="panel-section__title">Actions</h3>
-                    <div class="panel-section__actions">
-                      <button class="btn btn--primary btn--full">Build in Lovable</button>
-                      <button class="btn btn--secondary btn--full">It Worked</button>
-                      <button class="btn btn--secondary btn--full btn--warning">Error</button>
-                      <button class="btn btn--secondary btn--full">Add Screenshot</button>
-                    </div>
-                  </section>
-                </div>
-              </div>
-            </aside>
+          <!-- Route View -->
+          <section class="route-view">
+            <header class="route-header">
+              <h1 class="route-title" id="route-title">Dashboard</h1>
+              <p class="route-subtitle">
+                This section will be built in the next step.
+              </p>
+            </header>
           </section>
         </div>
       </main>
