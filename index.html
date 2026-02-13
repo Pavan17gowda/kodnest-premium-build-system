@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KodNest Premium Build System</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Top Bar -->
+      <header class="top-bar">
+        <div class="top-bar__left">
+          <span class="top-bar__project-name">KodNest Premium Build System</span>
+        </div>
+        <div class="top-bar__center">
+          <div class="top-bar__progress-label">Step 1 / 4</div>
+          <div class="top-bar__progress-track">
+            <div class="top-bar__progress-fill" style="width: 25%"></div>
+          </div>
+        </div>
+        <div class="top-bar__right">
+          <span class="badge badge--in-progress">In Progress</span>
+        </div>
+      </header>
+
+      <main class="main">
+        <div class="main__inner">
+          <!-- Context Header -->
+          <section class="context-header">
+            <h1 class="context-header__title">Define your build context</h1>
+            <p class="context-header__subtitle">
+              Provide enough detail for a reproducible build, without over-specifying implementation.
+            </p>
+          </section>
+
+          <!-- Workspace Layout -->
+          <section class="layout">
+            <!-- Primary Workspace (70%) -->
+            <div class="layout__primary">
+              <div class="card">
+                <div class="card__header">
+                  <h2 class="card__title">Build brief</h2>
+                  <p class="card__meta">This is the core description of what you want built.</p>
+                </div>
+                <div class="card__body">
+                  <div class="field-group">
+                    <label for="brief-title" class="field-label">Title</label>
+                    <input
+                      id="brief-title"
+                      class="field-input"
+                      type="text"
+                      placeholder="e.g. Customer onboarding flow"
+                    />
+                  </div>
+
+                  <div class="field-group">
+                    <label for="brief-summary" class="field-label">Summary</label>
+                    <textarea
+                      id="brief-summary"
+                      class="field-input field-input--textarea"
+                      placeholder="Describe the user journey, constraints, and desired outcome..."
+                    ></textarea>
+                    <p class="field-helper">
+                      Aim for 3–7 sentences. Focus on what success looks like rather than technical detail.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card__header">
+                  <h2 class="card__title">Environment & constraints</h2>
+                  <p class="card__meta">Capture where this build lives and any non-negotiables.</p>
+                </div>
+                <div class="card__body card__body--columns">
+                  <div class="field-group">
+                    <label for="target-env" class="field-label">Target environment</label>
+                    <input
+                      id="target-env"
+                      class="field-input"
+                      type="text"
+                      placeholder="e.g. Web, mobile-responsive, internal dashboard"
+                    />
+                  </div>
+
+                  <div class="field-group">
+                    <label for="constraints" class="field-label">Constraints</label>
+                    <textarea
+                      id="constraints"
+                      class="field-input field-input--textarea"
+                      placeholder="List design, technical, or compliance constraints..."
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Secondary Panel (30%) -->
+            <aside class="layout__secondary">
+              <div class="card card--secondary">
+                <div class="card__header">
+                  <h2 class="card__title">Step guidance</h2>
+                  <p class="card__meta">
+                    Use this brief to create a build-ready prompt that can be reused across tools.
+                  </p>
+                </div>
+                <div class="card__body card__body--stack">
+                  <section class="panel-section">
+                    <h3 class="panel-section__title">Prompt draft</h3>
+                    <div class="prompt-box">
+                      <pre class="prompt-box__content" contenteditable="false">
+You are building a production-ready feature for KodNest.
+Use a calm, intentional interface.
+Follow the provided build brief and environment details.
+No gradients, no playful visuals, no experimental layouts.</pre
+                      >
+                    </div>
+                    <button class="btn btn--secondary btn--full">Copy</button>
+                  </section>
+
+                  <section class="panel-section">
+                    <h3 class="panel-section__title">Actions</h3>
+                    <div class="panel-section__actions">
+                      <button class="btn btn--primary btn--full">Build in Lovable</button>
+                      <button class="btn btn--secondary btn--full">It Worked</button>
+                      <button class="btn btn--secondary btn--full btn--warning">Error</button>
+                      <button class="btn btn--secondary btn--full">Add Screenshot</button>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </aside>
+          </section>
+        </div>
+      </main>
+
+      <!-- Proof Footer -->
+      <footer class="proof-footer">
+        <div class="proof-footer__inner">
+          <div class="proof-item">
+            <label class="proof-checkbox">
+              <input type="checkbox" />
+              <span class="proof-checkbox__label">UI Built</span>
+            </label>
+            <input
+              type="text"
+              class="field-input field-input--compact"
+              placeholder="Link or note to confirm UI state"
+            />
+          </div>
+
+          <div class="proof-item">
+            <label class="proof-checkbox">
+              <input type="checkbox" />
+              <span class="proof-checkbox__label">Logic Working</span>
+            </label>
+            <input
+              type="text"
+              class="field-input field-input--compact"
+              placeholder="Describe how logic was verified"
+            />
+          </div>
+
+          <div class="proof-item">
+            <label class="proof-checkbox">
+              <input type="checkbox" />
+              <span class="proof-checkbox__label">Test Passed</span>
+            </label>
+            <input
+              type="text"
+              class="field-input field-input--compact"
+              placeholder="Attach test run or scenario"
+            />
+          </div>
+
+          <div class="proof-item">
+            <label class="proof-checkbox">
+              <input type="checkbox" />
+              <span class="proof-checkbox__label">Deployed</span>
+            </label>
+            <input
+              type="text"
+              class="field-input field-input--compact"
+              placeholder="Deployment URL or environment reference"
+            />
+          </div>
+        </div>
+      </footer>
+    </div>
+  </body>
+  </html>
+
