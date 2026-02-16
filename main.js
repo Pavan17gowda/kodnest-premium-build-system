@@ -5,6 +5,8 @@ const ROUTES = {
   "/digest": "digest",
   "/settings": "settings",
   "/proof": "proof",
+  "/jt/07-test": "test",
+  "/jt/08-ship": "ship",
 };
 
 const STORAGE_KEY = "jobNotificationTracker:savedJobs";
@@ -12,6 +14,7 @@ const PREFERENCES_KEY = "jobTrackerPreferences";
 const DIGEST_KEY_PREFIX = "jobTrackerDigest_";
 const STATUS_KEY = "jobTrackerStatus";
 const STATUS_HISTORY_KEY = "jobTrackerStatusHistory";
+const TEST_CHECKLIST_KEY = "jobTrackerTestChecklist";
 
 let currentFilters = {
   keyword: "",
@@ -506,6 +509,104 @@ function addStatusHistory(jobId, status) {
 function getRecentStatusUpdates(limit = 10) {
   const history = getStatusHistory();
   return history.slice(0, limit);
+}
+
+const TEST_ITEMS = [
+  {
+    id: "preferences-persist",
+    label: "Preferences persist after refresh",
+    howToTest: "Set preferences in Settings, refresh page, verify they're still there",
+  },
+  {
+    id: "match-score",
+    label: "Match score calculates correctly",
+    howToTest: "Set preferences, check Dashboard jobs have correct match percentages",
+  },
+  {
+    id: "show-matches-toggle",
+    label: '"Show only matches" toggle works',
+    howToTest: "Enable toggle on Dashboard, verify only jobs above threshold show",
+  },
+  {
+    id: "save-job-persist",
+    label: "Save job persists after refresh",
+    howToTest: "Save a job, refresh page, verify it's still saved",
+  },
+  {
+    id: "apply-new-tab",
+    label: "Apply opens in new tab",
+    howToTest: "Click Apply button, verify job URL opens in new tab",
+  },
+  {
+    id: "status-persist",
+    label: "Status update persists after refresh",
+    howToTest: "Change job status, refresh page, verify status is maintained",
+  },
+  {
+    id: "status-filter",
+    label: "Status filter works correctly",
+    howToTest: "Set status filter to 'Applied', verify only Applied jobs show",
+  },
+  {
+    id: "digest-top-10",
+    label: "Digest generates top 10 by score",
+    howToTest: "Generate digest, verify 10 jobs sorted by match score descending",
+  },
+  {
+    id: "digest-persist",
+    label: "Digest persists for the day",
+    howToTest: "Generate digest, refresh page, verify same digest loads",
+  },
+  {
+    id: "no-console-errors",
+    label: "No console errors on main pages",
+    howToTest: "Open DevTools Console, navigate all pages, verify no errors",
+  },
+];
+
+function getTestChecklist() {
+  try {
+    const raw = localStorage.getItem(TEST_CHECKLIST_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveTestChecklist(checklist) {
+  try {
+    localStorage.setItem(TEST_CHECKLIST_KEY, JSON.stringify(checklist));
+  } catch {
+    // ignore
+  }
+}
+
+function toggleTestItem(itemId) {
+  const checklist = getTestChecklist();
+  checklist[itemId] = !checklist[itemId];
+  saveTestChecklist(checklist);
+  return checklist;
+}
+
+function resetTestChecklist() {
+  try {
+    localStorage.removeItem(TEST_CHECKLIST_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function getTestProgress() {
+  const checklist = getTestChecklist();
+  const total = TEST_ITEMS.length;
+  const passed = TEST_ITEMS.filter((item) => checklist[item.id]).length;
+  return { passed, total, allPassed: passed === total };
+}
+
+function isShipUnlocked() {
+  const progress = getTestProgress();
+  return progress.allPassed;
 }
 
 function formatDaysAgo(days) {
@@ -1267,6 +1368,131 @@ function renderProof() {
   `;
 }
 
+function renderTest() {
+  const checklist = getTestChecklist();
+  const progress = getTestProgress();
+
+  const checklistItems = TEST_ITEMS.map((item) => {
+    const checked = checklist[item.id] || false;
+    return `
+      <div class="test-item">
+        <label class="test-item__checkbox">
+          <input 
+            type="checkbox" 
+            data-test-id="${item.id}"
+            ${checked ? "checked" : ""}
+          />
+          <span class="test-item__label">${item.label}</span>
+        </label>
+        <button 
+          type="button" 
+          class="test-item__tooltip-btn" 
+          data-tooltip="${item.howToTest}"
+          aria-label="How to test"
+        >
+          ?
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  const warningSection = progress.allPassed
+    ? ""
+    : `
+      <div class="test-warning">
+        <p class="test-warning__text">
+          Resolve all issues before shipping.
+        </p>
+      </div>
+    `;
+
+  return `
+    <header class="route-header">
+      <h1 class="route-title">Test Checklist</h1>
+      <p class="route-subtitle">
+        Verify all features work correctly before shipping.
+      </p>
+    </header>
+
+    <section class="test-checklist">
+      <div class="test-summary">
+        <h2 class="test-summary__title">Tests Passed: ${progress.passed} / ${progress.total}</h2>
+        ${warningSection}
+      </div>
+
+      <div class="test-items">
+        ${checklistItems}
+      </div>
+
+      <div class="test-actions">
+        <button type="button" class="btn btn--secondary" id="reset-test-btn">
+          Reset Test Status
+        </button>
+        <button 
+          type="button" 
+          class="btn btn--primary js-route-link" 
+          data-route="/jt/08-ship"
+          ${progress.allPassed ? "" : "disabled"}
+        >
+          ${progress.allPassed ? "Proceed to Ship →" : "Complete Tests to Unlock"}
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+function renderShip() {
+  const progress = getTestProgress();
+
+  if (!progress.allPassed) {
+    return `
+      <section class="empty-state">
+        <h1 class="route-title">🔒 Ship Locked</h1>
+        <p class="route-subtitle">
+          Complete all test checklist items to unlock shipping.
+        </p>
+        <div class="route-actions">
+          <button type="button" class="btn btn--primary js-route-link" data-route="/jt/07-test">
+            Go to Test Checklist
+          </button>
+        </div>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="ship-unlocked">
+      <h1 class="route-title">✅ Ready to Ship</h1>
+      <p class="route-subtitle">
+        All tests passed! Your Job Notification Tracker is production-ready.
+      </p>
+      
+      <div class="ship-summary">
+        <h2 class="ship-summary__title">What's Been Built</h2>
+        <ul class="ship-summary__list">
+          <li>✅ Preference management with localStorage persistence</li>
+          <li>✅ Deterministic match scoring (0-100 scale)</li>
+          <li>✅ Color-coded match badges and filtering</li>
+          <li>✅ Job saving and status tracking</li>
+          <li>✅ Daily digest generation with email export</li>
+          <li>✅ Status history and notifications</li>
+          <li>✅ Comprehensive filter system with AND logic</li>
+          <li>✅ Responsive premium design</li>
+        </ul>
+      </div>
+
+      <div class="ship-actions">
+        <button type="button" class="btn btn--secondary js-route-link" data-route="/jt/07-test">
+          ← Back to Tests
+        </button>
+        <button type="button" class="btn btn--primary" id="ship-confirm-btn">
+          Mark as Shipped 🚀
+        </button>
+      </div>
+    </section>
+  `;
+}
+
 function renderRoute(pathname) {
   const normalized = normalizePath(pathname);
   const container = document.getElementById("route-content");
@@ -1290,6 +1516,12 @@ function renderRoute(pathname) {
     case "proof":
       html = renderProof();
       break;
+    case "test":
+      html = renderTest();
+      break;
+    case "ship":
+      html = renderShip();
+      break;
     case "landing":
     default:
       html = renderLanding();
@@ -1304,6 +1536,10 @@ function renderRoute(pathname) {
     initDashboardRoute();
   } else if (routeKey === "digest") {
     initDigestRoute();
+  } else if (routeKey === "test") {
+    initTestRoute();
+  } else if (routeKey === "ship") {
+    initShipRoute();
   }
 }
 
@@ -1727,6 +1963,44 @@ function initDigestRoute() {
       }
     });
   });
+}
+
+function initTestRoute() {
+  const checkboxes = document.querySelectorAll('input[type="checkbox"][data-test-id]');
+  checkboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", (e) => {
+      const testId = e.target.getAttribute("data-test-id");
+      toggleTestItem(testId);
+      renderRoute(window.location.pathname);
+    });
+  });
+
+  const resetBtn = document.getElementById("reset-test-btn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (confirm("Reset all test status? This will uncheck all items.")) {
+        resetTestChecklist();
+        renderRoute(window.location.pathname);
+      }
+    });
+  }
+
+  const tooltipBtns = document.querySelectorAll(".test-item__tooltip-btn");
+  tooltipBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const tooltip = e.target.getAttribute("data-tooltip");
+      alert(tooltip);
+    });
+  });
+}
+
+function initShipRoute() {
+  const shipBtn = document.getElementById("ship-confirm-btn");
+  if (shipBtn) {
+    shipBtn.addEventListener("click", () => {
+      showToast("🚀 Marked as shipped! Great work!");
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", initNavigation);
