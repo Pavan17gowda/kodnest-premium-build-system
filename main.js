@@ -15,6 +15,7 @@ const DIGEST_KEY_PREFIX = "jobTrackerDigest_";
 const STATUS_KEY = "jobTrackerStatus";
 const STATUS_HISTORY_KEY = "jobTrackerStatusHistory";
 const TEST_CHECKLIST_KEY = "jobTrackerTestChecklist";
+const PROOF_KEY = "jobTrackerProof";
 
 let currentFilters = {
   keyword: "",
@@ -607,6 +608,89 @@ function getTestProgress() {
 function isShipUnlocked() {
   const progress = getTestProgress();
   return progress.allPassed;
+}
+
+const PROJECT_STEPS = [
+  { id: 1, name: "Preferences & Match Scoring", status: "completed" },
+  { id: 2, name: "Job Saving & Filtering", status: "completed" },
+  { id: 3, name: "Status Tracking", status: "completed" },
+  { id: 4, name: "Daily Digest Engine", status: "completed" },
+  { id: 5, name: "Test Checklist", status: "completed" },
+  { id: 6, name: "Ship Lock", status: "completed" },
+  { id: 7, name: "Proof & Submission", status: "completed" },
+  { id: 8, name: "Final Deployment", status: "pending" },
+];
+
+function getProofData() {
+  try {
+    const raw = localStorage.getItem(PROOF_KEY);
+    if (!raw) {
+      return {
+        lovableLink: "",
+        githubLink: "",
+        deploymentLink: "",
+        shipped: false,
+      };
+    }
+    return JSON.parse(raw);
+  } catch {
+    return {
+      lovableLink: "",
+      githubLink: "",
+      deploymentLink: "",
+      shipped: false,
+    };
+  }
+}
+
+function saveProofData(data) {
+  try {
+    localStorage.setItem(PROOF_KEY, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
+function isValidUrl(url) {
+  if (!url) return false;
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function canShipProject() {
+  const proof = getProofData();
+  const testProgress = getTestProgress();
+  
+  const hasAllLinks = 
+    isValidUrl(proof.lovableLink) &&
+    isValidUrl(proof.githubLink) &&
+    isValidUrl(proof.deploymentLink);
+  
+  const allTestsPassed = testProgress.allPassed;
+  
+  return hasAllLinks && allTestsPassed;
+}
+
+function getProjectStatus() {
+  const proof = getProofData();
+  
+  if (proof.shipped) {
+    return "shipped";
+  }
+  
+  const hasAnyLink = proof.lovableLink || proof.githubLink || proof.deploymentLink;
+  const testProgress = getTestProgress();
+  const hasAnyTest = testProgress.passed > 0;
+  
+  if (hasAnyLink || hasAnyTest) {
+    return "in-progress";
+  }
+  
+  return "not-started";
 }
 
 function formatDaysAgo(days) {
@@ -1358,12 +1442,161 @@ function renderDigest() {
 }
 
 function renderProof() {
-  return `
-    <section class="empty-state">
-      <h1 class="route-title">Proof</h1>
-      <p class="route-subtitle">
-        This space will collect artifacts that demonstrate your job search activity and outcomes.
+  const proof = getProofData();
+  const testProgress = getTestProgress();
+  const canShip = canShipProject();
+  const projectStatus = getProjectStatus();
+  
+  let statusBadge = "";
+  let statusClass = "";
+  
+  if (projectStatus === "shipped") {
+    statusBadge = "Shipped";
+    statusClass = "proof-status--shipped";
+  } else if (projectStatus === "in-progress") {
+    statusBadge = "In Progress";
+    statusClass = "proof-status--progress";
+  } else {
+    statusBadge = "Not Started";
+    statusClass = "proof-status--not-started";
+  }
+  
+  const stepsHtml = PROJECT_STEPS.map((step) => {
+    const isCompleted = step.status === "completed";
+    const icon = isCompleted ? "✓" : "○";
+    const statusText = isCompleted ? "Completed" : "Pending";
+    const itemClass = isCompleted ? "proof-step--completed" : "proof-step--pending";
+    
+    return `
+      <div class="proof-step ${itemClass}">
+        <span class="proof-step__icon">${icon}</span>
+        <span class="proof-step__name">${step.name}</span>
+        <span class="proof-step__status">${statusText}</span>
+      </div>
+    `;
+  }).join("");
+  
+  const shippedMessage = proof.shipped ? `
+    <div class="proof-shipped-message">
+      <p class="proof-shipped-message__text">
+        Project 1 Shipped Successfully.
       </p>
+    </div>
+  ` : "";
+  
+  const validationMessage = !canShip && !proof.shipped ? `
+    <div class="proof-validation">
+      <p class="proof-validation__title">Requirements to Ship:</p>
+      <ul class="proof-validation__list">
+        <li class="${isValidUrl(proof.lovableLink) ? 'proof-validation__item--done' : ''}">
+          ${isValidUrl(proof.lovableLink) ? '✓' : '○'} Lovable Project Link
+        </li>
+        <li class="${isValidUrl(proof.githubLink) ? 'proof-validation__item--done' : ''}">
+          ${isValidUrl(proof.githubLink) ? '✓' : '○'} GitHub Repository Link
+        </li>
+        <li class="${isValidUrl(proof.deploymentLink) ? 'proof-validation__item--done' : ''}">
+          ${isValidUrl(proof.deploymentLink) ? '✓' : '○'} Deployed URL
+        </li>
+        <li class="${testProgress.allPassed ? 'proof-validation__item--done' : ''}">
+          ${testProgress.allPassed ? '✓' : '○'} All 10 Test Checklist Items (${testProgress.passed}/10)
+        </li>
+      </ul>
+    </div>
+  ` : "";
+
+  return `
+    <header class="route-header">
+      <div class="proof-header">
+        <div>
+          <h1 class="route-title">Project 1 — Job Notification Tracker</h1>
+          <p class="route-subtitle">Final proof and submission system</p>
+        </div>
+        <span class="proof-status ${statusClass}">${statusBadge}</span>
+      </div>
+    </header>
+
+    ${shippedMessage}
+
+    <section class="proof-section">
+      <h2 class="proof-section__title">A) Step Completion Summary</h2>
+      <div class="proof-steps">
+        ${stepsHtml}
+      </div>
+    </section>
+
+    <section class="proof-section">
+      <h2 class="proof-section__title">B) Artifact Collection</h2>
+      <form class="proof-form" id="proof-form">
+        <div class="field-group">
+          <label for="lovable-link" class="field-label">Lovable Project Link *</label>
+          <input
+            id="lovable-link"
+            name="lovableLink"
+            class="field-input"
+            type="url"
+            placeholder="https://lovable.dev/projects/..."
+            value="${proof.lovableLink}"
+            ${proof.shipped ? 'readonly' : ''}
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="github-link" class="field-label">GitHub Repository Link *</label>
+          <input
+            id="github-link"
+            name="githubLink"
+            class="field-input"
+            type="url"
+            placeholder="https://github.com/username/repo"
+            value="${proof.githubLink}"
+            ${proof.shipped ? 'readonly' : ''}
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="deployment-link" class="field-label">Deployed URL (Vercel or equivalent) *</label>
+          <input
+            id="deployment-link"
+            name="deploymentLink"
+            class="field-input"
+            type="url"
+            placeholder="https://your-project.vercel.app"
+            value="${proof.deploymentLink}"
+            ${proof.shipped ? 'readonly' : ''}
+          />
+        </div>
+
+        ${!proof.shipped ? `
+          <button type="submit" class="btn btn--primary">
+            Save Links
+          </button>
+        ` : ''}
+      </form>
+    </section>
+
+    ${validationMessage}
+
+    <section class="proof-section">
+      <h2 class="proof-section__title">Final Submission</h2>
+      <div class="proof-actions">
+        <button type="button" class="btn btn--secondary" id="copy-submission-btn">
+          Copy Final Submission
+        </button>
+        ${!proof.shipped ? `
+          <button 
+            type="button" 
+            class="btn btn--primary" 
+            id="mark-shipped-btn"
+            ${canShip ? '' : 'disabled'}
+          >
+            ${canShip ? 'Mark as Shipped' : 'Complete Requirements to Ship'}
+          </button>
+        ` : `
+          <button type="button" class="btn btn--secondary" disabled>
+            Already Shipped ✓
+          </button>
+        `}
+      </div>
     </section>
   `;
 }
@@ -1540,6 +1773,8 @@ function renderRoute(pathname) {
     initTestRoute();
   } else if (routeKey === "ship") {
     initShipRoute();
+  } else if (routeKey === "proof") {
+    initProofRoute();
   }
 }
 
@@ -1999,6 +2234,95 @@ function initShipRoute() {
   if (shipBtn) {
     shipBtn.addEventListener("click", () => {
       showToast("🚀 Marked as shipped! Great work!");
+    });
+  }
+}
+
+function initProofRoute() {
+  const form = document.getElementById("proof-form");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(form);
+      const lovableLink = formData.get("lovableLink").toString().trim();
+      const githubLink = formData.get("githubLink").toString().trim();
+      const deploymentLink = formData.get("deploymentLink").toString().trim();
+      
+      // Validate URLs
+      const errors = [];
+      if (lovableLink && !isValidUrl(lovableLink)) {
+        errors.push("Lovable Project Link must be a valid URL");
+      }
+      if (githubLink && !isValidUrl(githubLink)) {
+        errors.push("GitHub Repository Link must be a valid URL");
+      }
+      if (deploymentLink && !isValidUrl(deploymentLink)) {
+        errors.push("Deployed URL must be a valid URL");
+      }
+      
+      if (errors.length > 0) {
+        alert("Please fix the following errors:\n\n" + errors.join("\n"));
+        return;
+      }
+      
+      const proof = getProofData();
+      proof.lovableLink = lovableLink;
+      proof.githubLink = githubLink;
+      proof.deploymentLink = deploymentLink;
+      saveProofData(proof);
+      
+      showToast("Links saved successfully");
+      renderRoute(window.location.pathname);
+    });
+  }
+  
+  const copyBtn = document.getElementById("copy-submission-btn");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      const proof = getProofData();
+      
+      let text = `Job Notification Tracker — Final Submission\n\n`;
+      text += `Lovable Project:\n${proof.lovableLink || '(Not provided)'}\n\n`;
+      text += `GitHub Repository:\n${proof.githubLink || '(Not provided)'}\n\n`;
+      text += `Live Deployment:\n${proof.deploymentLink || '(Not provided)'}\n\n`;
+      text += `Core Features:\n`;
+      text += `- Intelligent match scoring\n`;
+      text += `- Daily digest simulation\n`;
+      text += `- Status tracking\n`;
+      text += `- Test checklist enforced\n`;
+      text += `\n${"=".repeat(80)}\n`;
+      
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy Final Submission";
+          }, 2000);
+        })
+        .catch(() => {
+          alert("Failed to copy to clipboard");
+        });
+    });
+  }
+  
+  const markShippedBtn = document.getElementById("mark-shipped-btn");
+  if (markShippedBtn) {
+    markShippedBtn.addEventListener("click", () => {
+      if (!canShipProject()) {
+        alert("Please complete all requirements before marking as shipped.");
+        return;
+      }
+      
+      if (confirm("Mark Project 1 as shipped? This action cannot be undone.")) {
+        const proof = getProofData();
+        proof.shipped = true;
+        saveProofData(proof);
+        
+        showToast("Project 1 Shipped Successfully.");
+        renderRoute(window.location.pathname);
+      }
     });
   }
 }
