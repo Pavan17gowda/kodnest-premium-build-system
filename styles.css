@@ -293,6 +293,18 @@ body {
   gap: var(--space-3);
 }
 
+.settings-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-range-value {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
 .empty-state {
   padding-top: var(--space-3);
   padding-bottom: var(--space-4);
@@ -304,6 +316,21 @@ body {
 
 .empty-state .route-subtitle {
   max-width: 720px;
+}
+
+.dashboard-banner {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border-strong);
+  background-color: var(--color-bg);
+}
+
+.dashboard-banner__text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
 }
 
 .filters {
@@ -321,6 +348,10 @@ body {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
+}
+
+.filters-row--secondary {
+  grid-template-columns: 1fr;
 }
 
 .filters-field {
@@ -352,6 +383,13 @@ body {
   gap: var(--space-2);
 }
 
+.job-card__header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
 .job-card__title {
   margin: 0;
   font-size: 18px;
@@ -366,6 +404,35 @@ body {
 
 .job-card__source {
   font-size: 11px;
+}
+
+.job-card__match {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-subtle);
+}
+
+.job-card__match--high {
+  color: var(--color-success);
+  background-color: var(--color-success-soft);
+  border-color: var(--color-success);
+}
+
+.job-card__match--medium {
+  color: var(--color-warning);
+  background-color: var(--color-warning-soft);
+  border-color: var(--color-warning);
+}
+
+.job-card__match--base {
+  color: var(--color-text);
+  background-color: rgba(17, 17, 17, 0.04);
+}
+
+.job-card__match--low {
+  color: var(--color-text-muted);
+  background-color: transparent;
 }
 
 .job-card__meta {
@@ -511,6 +578,60 @@ body {
   height: 32px;
   padding: 4px 8px;
   font-size: 13px;
+}
+
+.field-input[type="range"] {
+  padding: 0;
+  height: 24px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.field-input[type="range"]::-webkit-slider-track {
+  height: 4px;
+  background: var(--color-border-subtle);
+  border-radius: 999px;
+}
+
+.field-input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 3px rgba(17, 17, 17, 0.2);
+  margin-top: -6px;
+}
+
+.field-input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: var(--color-border-subtle);
+  border-radius: 999px;
+}
+
+.field-input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 3px rgba(17, 17, 17, 0.2);
+}
+
+.field-input[type="range"]:focus {
+  outline: none;
+}
+
+.field-input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--color-accent-soft), 0 1px 3px rgba(17, 17, 17, 0.2);
+}
+
+.field-input[type="range"]:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--color-accent-soft), 0 1px 3px rgba(17, 17, 17, 0.2);
 }
 
 .field-helper {
