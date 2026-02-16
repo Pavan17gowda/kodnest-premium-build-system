@@ -9,6 +9,7 @@ const ROUTES = {
 
 const STORAGE_KEY = "jobNotificationTracker:savedJobs";
 const PREFERENCES_KEY = "jobTrackerPreferences";
+const DIGEST_KEY_PREFIX = "jobTrackerDigest_";
 
 let currentFilters = {
   keyword: "",
@@ -428,6 +429,78 @@ function formatDaysAgo(days) {
   if (days <= 0) return "Today";
   if (days === 1) return "1 day ago";
   return `${days} days ago`;
+}
+
+function getTodayDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTodayDate() {
+  const now = new Date();
+  const options = { weekday: "long", year: "numeric", month: "long", day: "numeric" };
+  return now.toLocaleDateString("en-US", options);
+}
+
+function getDigestKey() {
+  return DIGEST_KEY_PREFIX + getTodayDateKey();
+}
+
+function getDigest() {
+  try {
+    const key = getDigestKey();
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveDigest(digest) {
+  try {
+    const key = getDigestKey();
+    localStorage.setItem(key, JSON.stringify(digest));
+  } catch {
+    // ignore
+  }
+}
+
+function generateDigest() {
+  const prefs = getPreferences();
+  const filters = {
+    keyword: "",
+    location: "all",
+    mode: "all",
+    experience: "all",
+    source: "all",
+    sort: "match",
+    onlyMatches: false,
+  };
+
+  const scoredJobs = applyFilters(JOBS, filters, prefs);
+
+  const topJobs = scoredJobs
+    .sort((a, b) => {
+      if (b.matchScore !== a.matchScore) {
+        return b.matchScore - a.matchScore;
+      }
+      return a.postedDaysAgo - b.postedDaysAgo;
+    })
+    .slice(0, 10);
+
+  const digest = {
+    date: getTodayDateKey(),
+    dateFormatted: formatTodayDate(),
+    jobs: topJobs,
+    generatedAt: new Date().toISOString(),
+  };
+
+  saveDigest(digest);
+  return digest;
 }
 
 function parseCommaList(value) {
@@ -904,13 +977,130 @@ function renderSaved() {
 }
 
 function renderDigest() {
+  const prefs = getPreferences();
+  const hasPrefs = hasActivePreferences(prefs);
+
+  if (!hasPrefs) {
+    return `
+      <section class="empty-state">
+        <h1 class="route-title">Digest</h1>
+        <p class="route-subtitle">
+          Set preferences to generate a personalized digest.
+        </p>
+        <div class="route-actions">
+          <button type="button" class="btn btn--primary js-route-link" data-route="/settings">
+            Go to Settings
+          </button>
+        </div>
+      </section>
+    `;
+  }
+
+  const existingDigest = getDigest();
+
+  if (!existingDigest) {
+    return `
+      <header class="route-header">
+        <h1 class="route-title">Daily Digest</h1>
+        <p class="route-subtitle">
+          Generate your personalized 9AM job digest based on your preferences.
+        </p>
+      </header>
+      <section class="digest-generator">
+        <button type="button" class="btn btn--primary btn--full" id="generate-digest-btn">
+          Generate Today's 9AM Digest (Simulated)
+        </button>
+        <p class="digest-note">
+          Demo Mode: Daily 9AM trigger simulated manually.
+        </p>
+      </section>
+    `;
+  }
+
+  const jobs = existingDigest.jobs || [];
+
+  if (jobs.length === 0) {
+    return `
+      <header class="route-header">
+        <h1 class="route-title">Daily Digest</h1>
+        <p class="route-subtitle">${existingDigest.dateFormatted}</p>
+      </header>
+      <section class="empty-state">
+        <h2 class="route-title">No matching roles today.</h2>
+        <p class="route-subtitle">Check again tomorrow.</p>
+      </section>
+      <div class="digest-actions">
+        <button type="button" class="btn btn--secondary" id="regenerate-digest-btn">
+          Regenerate Digest
+        </button>
+      </div>
+    `;
+  }
+
+  const jobCards = jobs
+    .map(
+      (job, index) => `
+    <article class="digest-job">
+      <div class="digest-job__header">
+        <div class="digest-job__number">${index + 1}</div>
+        <div class="digest-job__info">
+          <h3 class="digest-job__title">${job.title}</h3>
+          <p class="digest-job__company">${job.company}</p>
+        </div>
+        <div class="digest-job__match">
+          <span class="digest-job__score">${job.matchScore}%</span>
+          <span class="digest-job__label">match</span>
+        </div>
+      </div>
+      <div class="digest-job__meta">
+        <span>${job.location}</span>
+        <span>${job.mode}</span>
+        <span>${job.experience}</span>
+        <span>${formatDaysAgo(job.postedDaysAgo)}</span>
+      </div>
+      <div class="digest-job__footer">
+        <button type="button" class="btn btn--primary btn--compact" data-action="apply" data-job-id="${job.id}">
+          Apply Now
+        </button>
+      </div>
+    </article>
+  `
+    )
+    .join("");
+
   return `
-    <section class="empty-state">
-      <h1 class="route-title">Digest</h1>
-      <p class="route-subtitle">
-        Your daily digest will live here. In the next step, this page will summarise new and saved jobs delivered at 9AM.
+    <div class="digest-container">
+      <header class="digest-header">
+        <h1 class="digest-title">Top 10 Jobs For You — 9AM Digest</h1>
+        <p class="digest-date">${existingDigest.dateFormatted}</p>
+      </header>
+      
+      <section class="digest-jobs">
+        ${jobCards}
+      </section>
+      
+      <footer class="digest-footer">
+        <p class="digest-footer__text">
+          This digest was generated based on your preferences.
+        </p>
+      </footer>
+      
+      <div class="digest-actions">
+        <button type="button" class="btn btn--secondary" id="copy-digest-btn">
+          Copy Digest to Clipboard
+        </button>
+        <button type="button" class="btn btn--secondary" id="email-digest-btn">
+          Create Email Draft
+        </button>
+        <button type="button" class="btn btn--secondary" id="regenerate-digest-btn">
+          Regenerate Digest
+        </button>
+      </div>
+      
+      <p class="digest-note">
+        Demo Mode: Daily 9AM trigger simulated manually.
       </p>
-    </section>
+    </div>
   `;
 }
 
@@ -960,6 +1150,8 @@ function renderRoute(pathname) {
     initSettingsForm();
   } else if (routeKey === "dashboard") {
     initDashboardRoute();
+  } else if (routeKey === "digest") {
+    initDigestRoute();
   }
 }
 
@@ -1252,6 +1444,96 @@ function initDashboardRoute() {
   if (sourceSelect) sourceSelect.value = currentFilters.source;
   if (sortSelect) sortSelect.value = currentFilters.sort;
   if (onlyMatchesCheckbox) onlyMatchesCheckbox.checked = currentFilters.onlyMatches;
+}
+
+function initDigestRoute() {
+  const generateBtn = document.getElementById("generate-digest-btn");
+  const regenerateBtn = document.getElementById("regenerate-digest-btn");
+  const copyBtn = document.getElementById("copy-digest-btn");
+  const emailBtn = document.getElementById("email-digest-btn");
+
+  if (generateBtn) {
+    generateBtn.addEventListener("click", () => {
+      generateDigest();
+      renderRoute(window.location.pathname);
+    });
+  }
+
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener("click", () => {
+      generateDigest();
+      renderRoute(window.location.pathname);
+    });
+  }
+
+  if (copyBtn) {
+    copyBtn.addEventListener("click", () => {
+      const digest = getDigest();
+      if (!digest) return;
+
+      let text = `Top 10 Jobs For You — 9AM Digest\n`;
+      text += `${digest.dateFormatted}\n\n`;
+
+      digest.jobs.forEach((job, index) => {
+        text += `${index + 1}. ${job.title}\n`;
+        text += `   Company: ${job.company}\n`;
+        text += `   Location: ${job.location} | Mode: ${job.mode}\n`;
+        text += `   Experience: ${job.experience}\n`;
+        text += `   Match Score: ${job.matchScore}%\n`;
+        text += `   Apply: ${job.applyUrl}\n\n`;
+      });
+
+      text += `This digest was generated based on your preferences.\n`;
+
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          copyBtn.textContent = "Copied!";
+          setTimeout(() => {
+            copyBtn.textContent = "Copy Digest to Clipboard";
+          }, 2000);
+        })
+        .catch(() => {
+          alert("Failed to copy to clipboard");
+        });
+    });
+  }
+
+  if (emailBtn) {
+    emailBtn.addEventListener("click", () => {
+      const digest = getDigest();
+      if (!digest) return;
+
+      const subject = encodeURIComponent("My 9AM Job Digest");
+      let body = `Top 10 Jobs For You — 9AM Digest\n`;
+      body += `${digest.dateFormatted}\n\n`;
+
+      digest.jobs.forEach((job, index) => {
+        body += `${index + 1}. ${job.title}\n`;
+        body += `   Company: ${job.company}\n`;
+        body += `   Location: ${job.location} | Mode: ${job.mode}\n`;
+        body += `   Experience: ${job.experience}\n`;
+        body += `   Match Score: ${job.matchScore}%\n`;
+        body += `   Apply: ${job.applyUrl}\n\n`;
+      });
+
+      body += `This digest was generated based on your preferences.\n`;
+
+      const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+      window.location.href = mailtoLink;
+    });
+  }
+
+  const applyButtons = document.querySelectorAll('.digest-job__footer button[data-action="apply"]');
+  applyButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const jobId = Number(btn.getAttribute("data-job-id"));
+      const job = findJobById(jobId);
+      if (job && job.applyUrl) {
+        window.open(job.applyUrl, "_blank", "noopener");
+      }
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", initNavigation);
