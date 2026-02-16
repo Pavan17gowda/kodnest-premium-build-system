@@ -10,6 +10,8 @@ const ROUTES = {
 const STORAGE_KEY = "jobNotificationTracker:savedJobs";
 const PREFERENCES_KEY = "jobTrackerPreferences";
 const DIGEST_KEY_PREFIX = "jobTrackerDigest_";
+const STATUS_KEY = "jobTrackerStatus";
+const STATUS_HISTORY_KEY = "jobTrackerStatusHistory";
 
 let currentFilters = {
   keyword: "",
@@ -19,6 +21,7 @@ let currentFilters = {
   source: "all",
   sort: "latest",
   onlyMatches: false,
+  status: "all",
 };
 
 const JOBS = createJobDataset();
@@ -425,6 +428,86 @@ function findJobById(id) {
   return JOBS.find((job) => job.id === id);
 }
 
+function getJobStatus(jobId) {
+  try {
+    const raw = localStorage.getItem(STATUS_KEY);
+    if (!raw) return "Not Applied";
+    const statuses = JSON.parse(raw);
+    return statuses[jobId] || "Not Applied";
+  } catch {
+    return "Not Applied";
+  }
+}
+
+function getAllJobStatuses() {
+  try {
+    const raw = localStorage.getItem(STATUS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function setJobStatus(jobId, status) {
+  try {
+    const statuses = getAllJobStatuses();
+    statuses[jobId] = status;
+    localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
+    
+    addStatusHistory(jobId, status);
+  } catch {
+    // ignore
+  }
+}
+
+function getStatusHistory() {
+  try {
+    const raw = localStorage.getItem(STATUS_HISTORY_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function addStatusHistory(jobId, status) {
+  try {
+    const history = getStatusHistory();
+    const job = findJobById(jobId);
+    if (!job) return;
+    
+    const entry = {
+      jobId,
+      jobTitle: job.title,
+      company: job.company,
+      status,
+      timestamp: new Date().toISOString(),
+      dateFormatted: new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+    };
+    
+    history.unshift(entry);
+    
+    const maxHistory = 50;
+    if (history.length > maxHistory) {
+      history.splice(maxHistory);
+    }
+    
+    localStorage.setItem(STATUS_HISTORY_KEY, JSON.stringify(history));
+  } catch {
+    // ignore
+  }
+}
+
+function getRecentStatusUpdates(limit = 10) {
+  const history = getStatusHistory();
+  return history.slice(0, limit);
+}
+
 function formatDaysAgo(days) {
   if (days <= 0) return "Today";
   if (days === 1) return "1 day ago";
@@ -638,7 +721,8 @@ function parseSalaryMin(value) {
 function applyFilters(jobs, filters, prefs) {
   const scoredJobs = jobs.map((job) => {
     const matchScore = computeMatchScore(job, prefs);
-    return { ...job, matchScore };
+    const status = getJobStatus(job.id);
+    return { ...job, matchScore, status };
   });
 
   const threshold = prefs && typeof prefs.minMatchScore === "number" ? prefs.minMatchScore : 40;
@@ -654,6 +738,7 @@ function applyFilters(jobs, filters, prefs) {
       if (filters.mode !== "all" && job.mode !== filters.mode) return false;
       if (filters.experience !== "all" && job.experience !== filters.experience) return false;
       if (filters.source !== "all" && job.source !== filters.source) return false;
+      if (filters.status !== "all" && job.status !== filters.status) return false;
       if (filters.onlyMatches && job.matchScore < threshold) return false;
       return true;
     })
@@ -846,6 +931,16 @@ function renderFilters() {
           </select>
         </div>
         <div class="filters-field">
+          <label class="field-label" for="filter-status">Status</label>
+          <select id="filter-status" name="status" class="field-input">
+            <option value="all">All</option>
+            <option value="Not Applied">Not Applied</option>
+            <option value="Applied">Applied</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Selected">Selected</option>
+          </select>
+        </div>
+        <div class="filters-field">
           <label class="field-label" for="filter-sort">Sort</label>
           <select id="filter-sort" name="sort" class="field-input">
             <option value="latest">Latest</option>
@@ -882,6 +977,16 @@ function renderJobCard(job, saved) {
     scoreClass = "job-card__match--base";
   }
 
+  const status = job.status || getJobStatus(job.id);
+  let statusClass = "job-card__status--neutral";
+  if (status === "Applied") {
+    statusClass = "job-card__status--applied";
+  } else if (status === "Rejected") {
+    statusClass = "job-card__status--rejected";
+  } else if (status === "Selected") {
+    statusClass = "job-card__status--selected";
+  }
+
   return `
     <article class="job-card" data-job-id="${job.id}">
       <header class="job-card__header">
@@ -899,6 +1004,23 @@ function renderJobCard(job, saved) {
         <span>${job.experience}</span>
         <span>${job.salaryRange}</span>
         <span>${formatDaysAgo(job.postedDaysAgo)}</span>
+      </div>
+      <div class="job-card__status-section">
+        <span class="job-card__status-label">Status:</span>
+        <div class="job-card__status-group">
+          <button type="button" class="job-card__status-btn ${status === "Not Applied" ? "active" : ""} ${statusClass}" data-action="status" data-status="Not Applied">
+            Not Applied
+          </button>
+          <button type="button" class="job-card__status-btn ${status === "Applied" ? "active" : ""} job-card__status--applied" data-action="status" data-status="Applied">
+            Applied
+          </button>
+          <button type="button" class="job-card__status-btn ${status === "Rejected" ? "active" : ""} job-card__status--rejected" data-action="status" data-status="Rejected">
+            Rejected
+          </button>
+          <button type="button" class="job-card__status-btn ${status === "Selected" ? "active" : ""} job-card__status--selected" data-action="status" data-status="Selected">
+            Selected
+          </button>
+        </div>
       </div>
       <footer class="job-card__footer">
         <button type="button" class="btn btn--secondary job-card__view" data-action="view">View</button>
@@ -1068,6 +1190,34 @@ function renderDigest() {
     )
     .join("");
 
+  const recentUpdates = getRecentStatusUpdates(10);
+  const statusUpdatesSection = recentUpdates.length > 0 ? `
+    <section class="status-updates">
+      <h2 class="status-updates__title">Recent Status Updates</h2>
+      <div class="status-updates__list">
+        ${recentUpdates.map(update => {
+          let statusClass = "status-updates__status--neutral";
+          if (update.status === "Applied") statusClass = "status-updates__status--applied";
+          else if (update.status === "Rejected") statusClass = "status-updates__status--rejected";
+          else if (update.status === "Selected") statusClass = "status-updates__status--selected";
+          
+          return `
+            <div class="status-updates__item">
+              <div class="status-updates__info">
+                <p class="status-updates__job">${update.jobTitle}</p>
+                <p class="status-updates__company">${update.company}</p>
+              </div>
+              <div class="status-updates__meta">
+                <span class="status-updates__status ${statusClass}">${update.status}</span>
+                <span class="status-updates__date">${update.dateFormatted}</span>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  ` : "";
+
   return `
     <div class="digest-container">
       <header class="digest-header">
@@ -1084,6 +1234,8 @@ function renderDigest() {
           This digest was generated based on your preferences.
         </p>
       </footer>
+      
+      ${statusUpdatesSection}
       
       <div class="digest-actions">
         <button type="button" class="btn btn--secondary" id="copy-digest-btn">
@@ -1200,6 +1352,29 @@ function closeJobModal() {
   modal.classList.remove("job-modal--open");
 }
 
+function showToast(message) {
+  const existingToast = document.querySelector(".toast");
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("toast--show");
+  }, 10);
+
+  setTimeout(() => {
+    toast.classList.remove("toast--show");
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
+}
+
 function handleJobListClick(event) {
   const card = event.target.closest(".job-card");
   if (!card) return;
@@ -1222,6 +1397,21 @@ function handleJobListClick(event) {
     if (job && job.applyUrl) {
       window.open(job.applyUrl, "_blank", "noopener");
     }
+  } else if (action === "status") {
+    const newStatus = event.target.getAttribute("data-status");
+    if (newStatus) {
+      setJobStatus(id, newStatus);
+      
+      const statusButtons = card.querySelectorAll('.job-card__status-btn');
+      statusButtons.forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-status') === newStatus) {
+          btn.classList.add('active');
+        }
+      });
+      
+      showToast(`Status updated: ${newStatus}`);
+    }
   }
 }
 
@@ -1233,6 +1423,7 @@ function readFiltersFromForm(form) {
   currentFilters.mode = (formData.get("mode") || "all").toString();
   currentFilters.experience = (formData.get("experience") || "all").toString();
   currentFilters.source = (formData.get("source") || "all").toString();
+  currentFilters.status = (formData.get("status") || "all").toString();
   currentFilters.sort = (formData.get("sort") || "latest").toString();
   currentFilters.onlyMatches = formData.get("onlyMatches") === "on";
 }
@@ -1434,6 +1625,7 @@ function initDashboardRoute() {
   const modeSelect = form.querySelector("#filter-mode");
   const experienceSelect = form.querySelector("#filter-experience");
   const sourceSelect = form.querySelector("#filter-source");
+  const statusSelect = form.querySelector("#filter-status");
   const sortSelect = form.querySelector("#filter-sort");
   const onlyMatchesCheckbox = form.querySelector("#filter-only-matches");
 
@@ -1442,6 +1634,7 @@ function initDashboardRoute() {
   if (modeSelect) modeSelect.value = currentFilters.mode;
   if (experienceSelect) experienceSelect.value = currentFilters.experience;
   if (sourceSelect) sourceSelect.value = currentFilters.source;
+  if (statusSelect) statusSelect.value = currentFilters.status;
   if (sortSelect) sortSelect.value = currentFilters.sort;
   if (onlyMatchesCheckbox) onlyMatchesCheckbox.checked = currentFilters.onlyMatches;
 }
